@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
-import { Download, FolderOpen, MousePointer2, Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { GraphEditor, ToolButton, edgeColorTools, type EditTool } from './components/GraphEditor';
 import { OutputCanvas } from './components/OutputCanvas';
+import { EXAMPLE_CATALOG, createExampleStateById, type ExampleId } from './domain/examples';
+import { MAX_LEVEL } from './domain/level';
 import { colorHex, PALETTE } from './domain/palette';
-import { createExampleState } from './domain/example';
 import { exportState, importState } from './domain/serialization';
 import { createInitialState } from './domain/state';
 import { buildOutputGraph } from './domain/substitution';
@@ -16,6 +17,7 @@ export default function App() {
   const [message, setMessage] = useState<string>('');
   const [resetKey, setResetKey] = useState(0);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const examplesMenuRef = useRef<HTMLDetailsElement | null>(null);
 
   const output = useMemo(() => buildOutputGraph(state), [state]);
 
@@ -37,11 +39,12 @@ export default function App() {
     setState((current) => ({ ...current, level }));
   }
 
-  function loadExample() {
-    setState(createExampleState());
+  function loadExample(id: ExampleId, name: string) {
+    setState(createExampleStateById(id));
     setActiveRule('red');
-    setMessage('Example loaded.');
+    setMessage(`${name} loaded.`);
     setResetKey((key) => key + 1);
+    examplesMenuRef.current?.removeAttribute('open');
   }
 
   function exportJson() {
@@ -75,90 +78,112 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <header className="app-header">
-          <div>
-            <h1>Geometric L-Systems</h1>
-            <p>Seed graph and substitution rules</p>
-          </div>
-          <button type="button" className="icon-button" onClick={loadExample} title="Load example">
-            <FolderOpen size={18} />
-          </button>
-        </header>
+    <div className="app-frame">
+      <header className="top-toolbar" role="toolbar" aria-label="Application toolbar">
+        <h1>Geometric L-Systems</h1>
 
-        <section className="control-section">
-          <div className="section-label">Edit Tool</div>
-          <div className="tool-strip" aria-label="Edit tools">
-            <ToolButton tool="move" activeTool={activeTool} label="Move vertices" onSelect={setActiveTool} />
-            <ToolButton tool="black" activeTool={activeTool} label="Black edge" onSelect={setActiveTool} />
-            {edgeColorTools().map((color) => (
-              <ToolButton key={color} tool={color} activeTool={activeTool} label={`${color} oriented edge`} onSelect={setActiveTool} />
+        <details className="toolbar-menu">
+          <summary>File</summary>
+          <div className="toolbar-menu-panel">
+            <button type="button" onClick={exportJson}>
+              <Download size={16} />
+              Export
+            </button>
+            <button type="button" onClick={() => importInputRef.current?.click()}>
+              <Upload size={16} />
+              Import
+            </button>
+          </div>
+        </details>
+
+        <details className="toolbar-menu" ref={examplesMenuRef}>
+          <summary>Examples</summary>
+          <div className="toolbar-menu-panel examples-menu-panel" aria-label="Examples">
+            {EXAMPLE_CATALOG.map((category) => (
+              <div className="examples-menu-category" key={category.name}>
+                <div className="toolbar-menu-section-label">{category.name}</div>
+                {category.examples.map((example) => (
+                  <button type="button" key={example.id} onClick={() => loadExample(example.id, example.name)}>
+                    {example.name}
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
-        </section>
+        </details>
+      </header>
 
-        <GraphEditor graph={state.seed} title="Seed" activeTool={activeTool} onChange={updateSeed} />
-
-        <section className="control-section compact">
-          <label className="range-label" htmlFor="level">
-            <span>Level</span>
-            <strong>{state.level}</strong>
-          </label>
-          <input
-            id="level"
-            type="range"
-            min="0"
-            max="5"
-            step="1"
-            value={state.level}
-            onInput={(event) => updateLevel(Number(event.currentTarget.value))}
-            onChange={(event) => updateLevel(Number(event.target.value))}
-          />
-        </section>
-
-        <section className="control-section">
-          <div className="section-label">Rules</div>
-          <div className="rule-tabs" role="tablist" aria-label="Substitution rules">
-            {PALETTE.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                className={`rule-tab${activeRule === entry.id ? ' active' : ''}`}
-                onClick={() => setActiveRule(entry.id)}
-                role="tab"
-                aria-selected={activeRule === entry.id}
-              >
-                <span className="tab-swatch" style={{ background: entry.hex }} />
-                {entry.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <GraphEditor
-          graph={state.rulesByColor[activeRule]}
-          title={`${labelFor(activeRule)} Rule`}
-          activeTool={activeTool}
-          onChange={(graph) => updateRule(activeRule, graph)}
-        />
-
-        <section className="control-section import-export">
-          <button type="button" onClick={exportJson}>
-            <Download size={16} />
-            Export JSON
-          </button>
-          <button type="button" onClick={() => importInputRef.current?.click()}>
-            <Upload size={16} />
-            Import JSON
-          </button>
+      <div className="app-shell">
+        <aside className="sidebar">
           <input ref={importInputRef} type="file" accept="application/json,.json" onChange={handleImport} hidden />
-        </section>
 
-        {message ? <div className="status-message">{message}</div> : null}
-      </aside>
+          <div className="sidebar-content">
+            <div className="sidebar-intro">
+              <p>Seed graph and substitution rules</p>
+            </div>
 
-      <OutputCanvas graph={output.graph} warnings={output.warnings} resetKey={resetKey} />
+            <section className="control-section">
+              <div className="section-label">Edit Tool</div>
+              <div className="tool-strip" aria-label="Edit tools">
+                <ToolButton tool="move" activeTool={activeTool} label="Move vertices" onSelect={setActiveTool} />
+                <ToolButton tool="black" activeTool={activeTool} label="Black edge" onSelect={setActiveTool} />
+                {edgeColorTools().map((color) => (
+                  <ToolButton key={color} tool={color} activeTool={activeTool} label={`${color} oriented edge`} onSelect={setActiveTool} />
+                ))}
+              </div>
+            </section>
+
+            <GraphEditor graph={state.seed} title="Seed" activeTool={activeTool} onChange={updateSeed} />
+
+            <section className="control-section">
+              <div className="section-label">Rules</div>
+              <div className="rule-tabs" role="tablist" aria-label="Substitution rules">
+                {PALETTE.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={`rule-tab${activeRule === entry.id ? ' active' : ''}`}
+                    onClick={() => setActiveRule(entry.id)}
+                    role="tab"
+                    aria-selected={activeRule === entry.id}
+                  >
+                    <span className="tab-swatch" style={{ background: entry.hex }} />
+                    {entry.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <GraphEditor
+              graph={state.rulesByColor[activeRule]}
+              title={`${labelFor(activeRule)} Rule`}
+              activeTool={activeTool}
+              onChange={(graph) => updateRule(activeRule, graph)}
+            />
+
+            {message ? <div className="status-message">{message}</div> : null}
+          </div>
+
+          <section className="control-section compact sidebar-footer">
+            <label className="range-label" htmlFor="level">
+              <span>Level</span>
+              <strong>{state.level}</strong>
+            </label>
+            <input
+              id="level"
+              type="range"
+              min="0"
+              max={MAX_LEVEL}
+              step="1"
+              value={state.level}
+              onInput={(event) => updateLevel(Number(event.currentTarget.value))}
+              onChange={(event) => updateLevel(Number(event.target.value))}
+            />
+          </section>
+        </aside>
+
+        <OutputCanvas graph={output.graph} warnings={output.warnings} resetKey={resetKey} />
+      </div>
     </div>
   );
 }

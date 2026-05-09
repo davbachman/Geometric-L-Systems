@@ -1,4 +1,5 @@
 import { EDGE_COLORS, PALETTE } from './palette';
+import { MAX_LEVEL } from './level';
 import type { AppState, Edge, EdgeColor, Graph, PaletteEntry, RuleMap, Vertex, VertexRole } from './types';
 
 type ImportResult = { ok: true; state: AppState } | { ok: false; error: string };
@@ -150,8 +151,8 @@ function validateGraph(
 }
 
 function validateLevel(value: unknown): { ok: true; level: number } | { ok: false; error: string } {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 5) {
-    return { ok: false, error: 'level must be an integer from 0 to 5.' };
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > MAX_LEVEL) {
+    return { ok: false, error: `level must be an integer from 0 to ${MAX_LEVEL}.` };
   }
 
   return { ok: true, level: value };

@@ -45,4 +45,14 @@ describe('state import/export', () => {
 
     expect(imported).toEqual({ ok: false, error: 'Seed edge bad references a missing vertex.' });
   });
+
+  it('imports saved states at level 7', () => {
+    const state = { ...createInitialState(), level: 7 };
+    const imported = importState(exportState(state));
+
+    expect(imported.ok).toBe(true);
+    if (imported.ok) {
+      expect(imported.state.level).toBe(7);
+    }
+  });
 });
