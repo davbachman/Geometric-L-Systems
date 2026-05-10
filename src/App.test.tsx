@@ -64,6 +64,54 @@ describe('App toolbar', () => {
     expect(screen.getByText('Gosper Curve loaded.')).toBeInTheDocument();
     expect((screen.getByRole('slider', { name: /Level/ }) as HTMLInputElement).value).toBe('3');
   });
+
+  it('undoes seed graph edits with Cmd+Z', () => {
+    mockCanvas();
+    mockResizeObserver(640, 480);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
+
+    const seedEditor = screen.getByRole('region', { name: 'Seed' });
+    const svg = seedEditor.querySelector('svg') as SVGSVGElement;
+    const background = seedEditor.querySelector('rect.editor-bg') as SVGRectElement;
+    mockSvgBounds(svg);
+
+    fireEvent.pointerDown(background, pointerAt(60, 70));
+    fireEvent.pointerMove(svg, pointerAt(180, 120));
+    fireEvent.pointerUp(svg, pointerAt(180, 120));
+
+    expect(seedEditor.querySelectorAll('line.editor-edge')).toHaveLength(1);
+
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+
+    expect(seedEditor.querySelectorAll('line.editor-edge')).toHaveLength(0);
+  });
+
+  it('undoes rule graph edits with Cmd+Z', () => {
+    mockCanvas();
+    mockResizeObserver(640, 480);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
+
+    const ruleEditor = screen.getByRole('region', { name: 'Red Rule' });
+    const svg = ruleEditor.querySelector('svg') as SVGSVGElement;
+    const source = ruleEditor.querySelector('circle.endpoint-black') as SVGCircleElement;
+    mockSvgBounds(svg);
+
+    fireEvent.pointerDown(source, pointerAt(36, 90));
+    fireEvent.pointerMove(svg, pointerAt(244, 90));
+    fireEvent.pointerUp(svg, pointerAt(244, 90));
+
+    expect(ruleEditor.querySelectorAll('line.editor-edge')).toHaveLength(1);
+
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+
+    expect(ruleEditor.querySelectorAll('line.editor-edge')).toHaveLength(0);
+  });
 });
 
 function mockCanvas() {
@@ -104,4 +152,27 @@ function mockResizeObserver(width: number, height: number) {
   }
 
   vi.stubGlobal('ResizeObserver', TestResizeObserver);
+}
+
+function pointerAt(x: number, y: number) {
+  return {
+    pointerId: 1,
+    clientX: x,
+    clientY: y,
+    buttons: 1,
+  };
+}
+
+function mockSvgBounds(svg: SVGSVGElement, size: { width: number; height: number } = { width: 280, height: 180 }) {
+  vi.spyOn(svg, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    left: 0,
+    top: 0,
+    right: size.width,
+    bottom: size.height,
+    width: size.width,
+    height: size.height,
+    toJSON: () => ({}),
+  });
 }

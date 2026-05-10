@@ -1,14 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { GraphEditor, ToolButton, edgeColorTools, type EditTool } from './components/GraphEditor';
 import { OutputCanvas } from './components/OutputCanvas';
 import { EXAMPLE_CATALOG, createExampleStateById, type ExampleId } from './domain/examples';
 import { MAX_LEVEL } from './domain/level';
-import { colorHex, PALETTE } from './domain/palette';
+import { colorHex, EDGE_COLORS, PALETTE } from './domain/palette';
 import { exportState, importState } from './domain/serialization';
 import { createInitialState } from './domain/state';
 import { buildOutputGraph } from './domain/substitution';
 import type { AppState, EdgeColor, Graph } from './domain/types';
+
+const MAX_UNDO_STATES = 100;
 
 export default function App() {
   const [state, setState] = useState<AppState>(() => createInitialState());
@@ -16,17 +18,59 @@ export default function App() {
   const [activeTool, setActiveTool] = useState<EditTool>('move');
   const [message, setMessage] = useState<string>('');
   const [resetKey, setResetKey] = useState(0);
+  const stateRef = useRef<AppState>(state);
+  const undoStackRef = useRef<AppState[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const examplesMenuRef = useRef<HTMLDetailsElement | null>(null);
 
+  stateRef.current = state;
+
   const output = useMemo(() => buildOutputGraph(state), [state]);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isUndoShortcut(event)) {
+        return;
+      }
+
+      const previous = undoStackRef.current.at(-1);
+      if (!previous) {
+        return;
+      }
+
+      event.preventDefault();
+      undoStackRef.current = undoStackRef.current.slice(0, -1);
+      stateRef.current = previous;
+      setState(previous);
+      setMessage('Undone.');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  function commitState(nextState: AppState) {
+    stateRef.current = nextState;
+    setState(nextState);
+  }
+
+  function commitGraphChange(update: (current: AppState) => AppState) {
+    const current = stateRef.current;
+    const nextState = update(current);
+    undoStackRef.current = [...undoStackRef.current, cloneAppState(current)].slice(-MAX_UNDO_STATES);
+    commitState(nextState);
+  }
+
+  function clearUndoHistory() {
+    undoStackRef.current = [];
+  }
+
   function updateSeed(seed: Graph) {
-    setState((current) => ({ ...current, seed }));
+    commitGraphChange((current) => ({ ...current, seed }));
   }
 
   function updateRule(color: EdgeColor, graph: Graph) {
-    setState((current) => ({
+    commitGraphChange((current) => ({
       ...current,
       rulesByColor: {
         ...current.rulesByColor,
@@ -36,11 +80,12 @@ export default function App() {
   }
 
   function updateLevel(level: number) {
-    setState((current) => ({ ...current, level }));
+    commitState({ ...stateRef.current, level });
   }
 
   function loadExample(id: ExampleId, name: string) {
-    setState(createExampleStateById(id));
+    clearUndoHistory();
+    commitState(createExampleStateById(id));
     setActiveRule('red');
     setMessage(`${name} loaded.`);
     setResetKey((key) => key + 1);
@@ -71,7 +116,8 @@ export default function App() {
       return;
     }
 
-    setState(result.state);
+    clearUndoHistory();
+    commitState(result.state);
     setActiveRule('red');
     setMessage('JSON imported.');
     setResetKey((key) => key + 1);
@@ -191,4 +237,27 @@ export default function App() {
 function labelFor(color: EdgeColor): string {
   const entry = PALETTE.find((item) => item.id === color);
   return entry?.label ?? color;
+}
+
+function isUndoShortcut(event: KeyboardEvent): boolean {
+  return event.key.toLowerCase() === 'z' && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey;
+}
+
+function cloneAppState(state: AppState): AppState {
+  return {
+    ...state,
+    palette: state.palette.map((entry) => ({ ...entry })),
+    seed: cloneGraph(state.seed),
+    rulesByColor: EDGE_COLORS.reduce((rules, color) => {
+      rules[color] = cloneGraph(state.rulesByColor[color]);
+      return rules;
+    }, {} as AppState['rulesByColor']),
+  };
+}
+
+function cloneGraph(graph: Graph): Graph {
+  return {
+    vertices: graph.vertices.map((vertex) => ({ ...vertex })),
+    edges: graph.edges.map((edge) => ({ ...edge })),
+  };
 }
