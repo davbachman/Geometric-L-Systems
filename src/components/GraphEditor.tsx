@@ -709,8 +709,7 @@ function PencilToolIcon({ color }: { color: string }) {
       <g transform="rotate(-45 10 10)">
         <rect x="8" y="1.5" width="4" height="12.5" rx="1" fill="#f8fafc" stroke="#475569" strokeWidth="1.3" />
         <rect x="8" y="1.5" width="4" height="3" rx="0.8" fill={color} stroke="#475569" strokeWidth="1.3" />
-        <path d="M8 14 L12 14 L10 19 Z" fill="#f2c98d" stroke="#475569" strokeWidth="1.2" strokeLinejoin="round" />
-        <path d="M9.25 17.1 L10.75 17.1 L10 19 Z" fill={color} />
+        <path d="M8 14 L12 14 L10 19 Z" fill={color} stroke="#475569" strokeWidth="1.2" strokeLinejoin="round" />
       </g>
     </svg>
   );
