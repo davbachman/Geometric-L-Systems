@@ -34,18 +34,17 @@ describe('GraphEditor visuals', () => {
       />,
     );
 
-    const guide = container.querySelector('line.substitution-guide') as SVGLineElement;
-    const guideMarker = container.querySelector('marker[id$="substitution-guide"]') as SVGMarkerElement;
+    const guide = container.querySelector('path.substitution-guide') as SVGPathElement;
     const endpoints = container.querySelectorAll('circle.vertex.substitution-endpoint');
 
     expect(endpoints).toHaveLength(2);
     expect(container.querySelector('circle.endpoint-black')).not.toBeInTheDocument();
     expect(container.querySelector('circle.endpoint-white-ring')).not.toBeInTheDocument();
-    expect(guide).toHaveAttribute('x1', '36');
-    expect(Number(guide.getAttribute('x2'))).toBeLessThan(244);
-    expect(guide).toHaveAttribute('stroke', '#dc2626');
-    expect(guideMarker).toHaveAttribute('markerWidth', '28');
-    expect(guideMarker).toHaveAttribute('markerHeight', '28');
+    expect(guide.getAttribute('d')).toContain('M 36 84');
+    expect(guide.getAttribute('d')).toContain('L 236 90');
+    expect(guide).toHaveAttribute('fill', '#dc2626');
+    expect(guide).toHaveAttribute('opacity', '0.2');
+    expect(container.querySelector('marker[id$="substitution-guide"]')).not.toBeInTheDocument();
   });
 
   it('shows selected edges with a halo instead of changing the edge stroke class', () => {

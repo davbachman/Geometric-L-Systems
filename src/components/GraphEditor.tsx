@@ -39,7 +39,7 @@ const VIEW_HEIGHT = 180;
 const INITIAL_VIEW_BOX: EditorViewBox = { x: 0, y: 0, width: VIEW_WIDTH, height: VIEW_HEIGHT };
 const VERTEX_RADIUS = 7;
 const ARROW_ENDPOINT_GAP = 12;
-const SUBSTITUTION_GUIDE_ENDPOINT_GAP = 18;
+const SUBSTITUTION_GUIDE_ENDPOINT_GAP = VERTEX_RADIUS + 1;
 const EDGE_TARGET_RADIUS = 14;
 const MIN_EDGE_DRAG_DISTANCE = 6;
 const MIN_VIEW_WIDTH = 28;
@@ -553,20 +553,6 @@ export function GraphEditor({ graph, title, activeTool, onChange, substitutionGu
               <path d="M 0 0 L 12 6 L 0 12 z" fill={entry.hex} />
             </marker>
           ))}
-          {substitutionGuideColor ? (
-            <marker
-              id={`${markerPrefix}-substitution-guide`}
-              viewBox="0 0 12 12"
-              refX="10"
-              refY="6"
-              markerWidth="28"
-              markerHeight="28"
-              markerUnits="userSpaceOnUse"
-              orient="auto"
-            >
-              <path d="M 0 0 L 12 6 L 0 12 z" fill={colorHex(substitutionGuideColor)} fillOpacity="0.2" />
-            </marker>
-          ) : null}
         </defs>
         <rect className="editor-bg" x={viewBox.x} y={viewBox.y} width={viewBox.width} height={viewBox.height} />
         {substitutionGuideColor && substitutionEndpoints?.source && substitutionEndpoints.target ? (
@@ -574,7 +560,6 @@ export function GraphEditor({ graph, title, activeTool, onChange, substitutionGu
             source={substitutionEndpoints.source}
             target={substitutionEndpoints.target}
             color={substitutionGuideColor}
-            markerId={`${markerPrefix}-substitution-guide`}
           />
         ) : null}
         <g>{graph.edges.map(renderEdge)}</g>
@@ -592,27 +577,66 @@ function SubstitutionGuide({
   source,
   target,
   color,
-  markerId,
 }: {
   source: Vertex;
   target: Vertex;
   color: EdgeColor;
-  markerId: string;
 }) {
-  const visibleTarget = shortenLineEnd(source, target, SUBSTITUTION_GUIDE_ENDPOINT_GAP);
+  const path = createSubstitutionGuidePath(source, target);
+  if (!path) {
+    return null;
+  }
 
   return (
-    <line
+    <path
       className="substitution-guide"
-      x1={source.x}
-      y1={source.y}
-      x2={visibleTarget.x}
-      y2={visibleTarget.y}
-      stroke={colorHex(color)}
-      markerEnd={`url(#${markerId})`}
+      d={path}
+      fill={colorHex(color)}
+      opacity="0.2"
       aria-hidden="true"
     />
   );
+}
+
+function createSubstitutionGuidePath(source: Vertex, target: Vertex): string | null {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const fullLength = Math.hypot(dx, dy);
+  const visibleLength = fullLength - Math.min(SUBSTITUTION_GUIDE_ENDPOINT_GAP, fullLength * 0.2);
+  if (visibleLength < 1) {
+    return null;
+  }
+
+  const unit = { x: dx / fullLength, y: dy / fullLength };
+  const normal = { x: -unit.y, y: unit.x };
+  const shaftHalfWidth = Math.min(6, visibleLength * 0.08);
+  const headLength = Math.min(30, visibleLength * 0.32);
+  const headHalfWidth = Math.min(17, visibleLength * 0.16);
+  const headBase = visibleLength - headLength;
+  const point = (along: number, offset: number) => ({
+    x: source.x + unit.x * along + normal.x * offset,
+    y: source.y + unit.y * along + normal.y * offset,
+  });
+  const tailTop = point(0, -shaftHalfWidth);
+  const shaftTop = point(headBase, -shaftHalfWidth);
+  const headTop = point(headBase, -headHalfWidth);
+  const tip = point(visibleLength, 0);
+  const headBottom = point(headBase, headHalfWidth);
+  const shaftBottom = point(headBase, shaftHalfWidth);
+  const tailBottom = point(0, shaftHalfWidth);
+  const formatPoint = ({ x, y }: Point) => `${roundViewValue(x)} ${roundViewValue(y)}`;
+
+  return [
+    `M ${formatPoint(tailTop)}`,
+    `L ${formatPoint(shaftTop)}`,
+    `L ${formatPoint(headTop)}`,
+    `L ${formatPoint(tip)}`,
+    `L ${formatPoint(headBottom)}`,
+    `L ${formatPoint(shaftBottom)}`,
+    `L ${formatPoint(tailBottom)}`,
+    `A ${roundViewValue(shaftHalfWidth)} ${roundViewValue(shaftHalfWidth)} 0 0 1 ${formatPoint(tailTop)}`,
+    'Z',
+  ].join(' ');
 }
 
 function DraftEdge({ source, pointer, tool }: { source?: Point; pointer: Point; tool: EditTool }) {

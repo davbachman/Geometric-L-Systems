@@ -319,11 +319,7 @@ button:hover {
 }
 
 .substitution-guide {
-  fill: none;
   pointer-events: none;
-  stroke-linecap: round;
-  stroke-opacity: 0.2;
-  stroke-width: 12;
 }
 
 .edge-selection-halo {
