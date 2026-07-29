@@ -222,8 +222,7 @@ button:hover {
   text-transform: uppercase;
 }
 
-.tool-strip,
-.rule-tabs {
+.tool-strip {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -237,23 +236,22 @@ button:hover {
   height: 32px;
 }
 
-.tool-button.active,
-.rule-tab.active {
+.tool-button.active {
   border-color: #0f172a;
   box-shadow: inset 0 0 0 1px #0f172a;
 }
 
-.tool-swatch,
 .mini-swatch,
 .tab-swatch {
   display: inline-block;
   border: 1px solid rgba(15, 23, 42, 0.3);
 }
 
-.tool-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
+.pencil-tool-icon {
+  display: block;
+  height: 20px;
+  overflow: visible;
+  width: 20px;
 }
 
 .mini-swatch,
@@ -261,6 +259,10 @@ button:hover {
   width: 10px;
   height: 10px;
   border-radius: 999px;
+}
+
+.seed-tab-swatch {
+  background: linear-gradient(135deg, #111827 0 50%, #ffffff 50% 100%);
 }
 
 .graph-editor {
@@ -385,13 +387,76 @@ input[type="range"] {
   accent-color: #0f172a;
 }
 
+.rule-window {
+  margin: 16px 0 10px;
+}
+
+.rule-window > .section-label {
+  margin-bottom: 7px;
+}
+
+.rule-tabs {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  overflow-x: auto;
+  padding: 0 3px;
+  position: relative;
+  scrollbar-width: thin;
+  z-index: 1;
+}
+
 .rule-tab {
   display: inline-flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 6px;
-  padding: 7px 9px;
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  border-radius: 8px 8px 0 0;
+  color: #475569;
+  margin-bottom: -1px;
+  padding: 7px 9px 8px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.rule-tab:hover {
+  background: #f1f5f9;
+}
+
+.rule-tab.active {
+  background: #ffffff;
+  border-color: #94a3b8;
+  border-bottom-color: #ffffff;
+  color: #0f172a;
+  padding-top: 9px;
+}
+
+.rule-tab-panel {
+  background: #ffffff;
+  border: 1px solid #94a3b8;
+  border-radius: 0 8px 8px 8px;
+}
+
+.rule-tab-panel > .graph-editor {
+  border: 0;
+  border-radius: 0 7px 7px 7px;
+  margin: 0;
+  padding: 12px;
+}
+
+.rule-tab-panel > .graph-editor .editor-heading {
+  justify-content: flex-end;
+}
+
+.rule-tab-panel > .graph-editor .editor-heading h2 {
+  display: none;
+}
+
+.rule-tab-panel > .graph-editor:focus-within {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px #cbd5e1;
 }
 
 .status-message {

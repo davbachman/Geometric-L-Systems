@@ -25,6 +25,17 @@ describe('App toolbar', () => {
     expect(within(toolbar).getByText('Examples')).toBeInTheDocument();
   });
 
+  it('uses colored-tip pencils for every edge tool', () => {
+    mockCanvas();
+    mockResizeObserver(640, 480);
+
+    render(<App />);
+
+    for (const label of ['Black edge', 'red oriented edge', 'blue oriented edge', 'green oriented edge', 'purple oriented edge']) {
+      expect(screen.getByRole('button', { name: label }).querySelector('svg.pencil-tool-icon')).toBeInTheDocument();
+    }
+  });
+
   it('creates a new model in the startup state and clears undo history', () => {
     mockCanvas();
     mockResizeObserver(640, 480);
@@ -35,12 +46,12 @@ describe('App toolbar', () => {
 
     fireEvent.click(within(toolbar).getByText('Examples'));
     fireEvent.click(within(toolbar).getByRole('button', { name: 'Gosper Curve' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Blue' }));
-    fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
 
     expect(screen.getByRole('slider', { name: /Level/ })).toHaveValue('3');
     expect(screen.getByRole('region', { name: 'Seed' }).querySelectorAll('line.editor-edge').length).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Blue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
     fireEvent.click(within(toolbar).getByText('File'));
     const fileMenu = within(toolbar).getByText('File').closest('details');
     fireEvent.click(within(toolbar).getByRole('button', { name: 'New' }));
@@ -48,8 +59,7 @@ describe('App toolbar', () => {
     expect(fileMenu).not.toHaveAttribute('open');
     expect(screen.getByRole('slider', { name: /Level/ })).toHaveValue('0');
     expect(screen.getByRole('region', { name: 'Seed' }).querySelectorAll('line.editor-edge')).toHaveLength(0);
-    expect(screen.getByRole('region', { name: 'Red Rule' }).querySelectorAll('line.editor-edge')).toHaveLength(0);
-    expect(screen.getByRole('tab', { name: 'Red' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Seed' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('button', { name: 'Move vertices' })).toHaveClass('active');
     expect(screen.queryByText('Gosper Curve loaded.')).not.toBeInTheDocument();
 
@@ -65,12 +75,34 @@ describe('App toolbar', () => {
     render(<App />);
 
     const sidebar = screen.getByRole('complementary');
-    const activeRuleEditor = within(sidebar).getByRole('region', { name: 'Red Rule' });
+    const activeEditor = within(sidebar).getByRole('region', { name: 'Seed' });
     const levelSlider = within(sidebar).getByRole('slider', { name: /Level/ });
 
     expect(levelSlider).toHaveAttribute('max', '7');
-    expect(activeRuleEditor.compareDocumentPosition(levelSlider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(activeEditor.compareDocumentPosition(levelSlider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(sidebar.lastElementChild).toContainElement(levelSlider);
+  });
+
+  it('presents the seed and substitution rules as one tabbed window', () => {
+    mockCanvas();
+    mockResizeObserver(640, 480);
+
+    render(<App />);
+
+    const tabs = screen.getByRole('tablist', { name: 'Seed and substitution rules' });
+    const activeTab = within(tabs).getByRole('tab', { name: 'Seed' });
+    const panel = screen.getByRole('tabpanel');
+
+    expect(screen.getByText('Rules', { selector: '.rule-window > .section-label' })).toBeInTheDocument();
+    expect(within(tabs).getAllByRole('tab')).toHaveLength(5);
+    expect(activeTab).toHaveAttribute('aria-selected', 'true');
+    expect(activeTab).toHaveAttribute('aria-controls', panel.id);
+    expect(panel).toHaveAttribute('aria-labelledby', activeTab.id);
+    expect(panel).toContainElement(screen.getByRole('region', { name: 'Seed' }));
+
+    fireEvent.click(within(tabs).getByRole('tab', { name: 'Red' }));
+
+    expect(screen.getByRole('tabpanel')).toContainElement(screen.getByRole('region', { name: 'Red Rule' }));
   });
 
   it('shows grouped examples and loads the selected example', () => {
@@ -129,6 +161,7 @@ describe('App toolbar', () => {
 
     render(<App />);
 
+    fireEvent.click(screen.getByRole('tab', { name: 'Red' }));
     fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
 
     const ruleEditor = screen.getByRole('region', { name: 'Red Rule' });

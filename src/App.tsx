@@ -11,10 +11,11 @@ import { buildOutputGraph } from './domain/substitution';
 import type { AppState, EdgeColor, Graph } from './domain/types';
 
 const MAX_UNDO_STATES = 100;
+type EditorTab = 'seed' | EdgeColor;
 
 export default function App() {
   const [state, setState] = useState<AppState>(() => createInitialState());
-  const [activeRule, setActiveRule] = useState<EdgeColor>('red');
+  const [activeEditor, setActiveEditor] = useState<EditorTab>('seed');
   const [activeTool, setActiveTool] = useState<EditTool>('move');
   const [message, setMessage] = useState<string>('');
   const [resetKey, setResetKey] = useState(0);
@@ -87,7 +88,7 @@ export default function App() {
   function createNewModel() {
     clearUndoHistory();
     commitState(createInitialState());
-    setActiveRule('red');
+    setActiveEditor('seed');
     setActiveTool('move');
     setMessage('');
     setResetKey((key) => key + 1);
@@ -97,7 +98,7 @@ export default function App() {
   function loadExample(id: ExampleId, name: string) {
     clearUndoHistory();
     commitState(createExampleStateById(id));
-    setActiveRule('red');
+    setActiveEditor('seed');
     setMessage(`${name} loaded.`);
     setResetKey((key) => key + 1);
     examplesMenuRef.current?.removeAttribute('open');
@@ -129,7 +130,7 @@ export default function App() {
 
     clearUndoHistory();
     commitState(result.state);
-    setActiveRule('red');
+    setActiveEditor('seed');
     setMessage('JSON imported.');
     setResetKey((key) => key + 1);
   }
@@ -194,34 +195,52 @@ export default function App() {
               </div>
             </section>
 
-            <GraphEditor key={`seed-${resetKey}`} graph={state.seed} title="Seed" activeTool={activeTool} onChange={updateSeed} />
-
-            <section className="control-section">
+            <section className="rule-window">
               <div className="section-label">Rules</div>
-              <div className="rule-tabs" role="tablist" aria-label="Substitution rules">
+              <div className="rule-tabs" role="tablist" aria-label="Seed and substitution rules">
+                <button
+                  id="editor-tab-seed"
+                  type="button"
+                  className={`rule-tab${activeEditor === 'seed' ? ' active' : ''}`}
+                  onClick={() => setActiveEditor('seed')}
+                  role="tab"
+                  aria-selected={activeEditor === 'seed'}
+                  aria-controls="editor-panel-seed"
+                >
+                  <span className="tab-swatch seed-tab-swatch" />
+                  Seed
+                </button>
                 {PALETTE.map((entry) => (
                   <button
                     key={entry.id}
+                    id={`editor-tab-${entry.id}`}
                     type="button"
-                    className={`rule-tab${activeRule === entry.id ? ' active' : ''}`}
-                    onClick={() => setActiveRule(entry.id)}
+                    className={`rule-tab${activeEditor === entry.id ? ' active' : ''}`}
+                    onClick={() => setActiveEditor(entry.id)}
                     role="tab"
-                    aria-selected={activeRule === entry.id}
+                    aria-selected={activeEditor === entry.id}
+                    aria-controls={`editor-panel-${entry.id}`}
                   >
                     <span className="tab-swatch" style={{ background: entry.hex }} />
                     {entry.label}
                   </button>
                 ))}
               </div>
+              <div
+                className="rule-tab-panel"
+                id={`editor-panel-${activeEditor}`}
+                role="tabpanel"
+                aria-labelledby={`editor-tab-${activeEditor}`}
+              >
+                <GraphEditor
+                  key={`${activeEditor}-${resetKey}`}
+                  graph={activeEditor === 'seed' ? state.seed : state.rulesByColor[activeEditor]}
+                  title={activeEditor === 'seed' ? 'Seed' : `${labelFor(activeEditor)} Rule`}
+                  activeTool={activeTool}
+                  onChange={(graph) => (activeEditor === 'seed' ? updateSeed(graph) : updateRule(activeEditor, graph))}
+                />
+              </div>
             </section>
-
-            <GraphEditor
-              key={`rule-${activeRule}-${resetKey}`}
-              graph={state.rulesByColor[activeRule]}
-              title={`${labelFor(activeRule)} Rule`}
-              activeTool={activeTool}
-              onChange={(graph) => updateRule(activeRule, graph)}
-            />
 
             {message ? <div className="status-message">{message}</div> : null}
           </div>
