@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Download, Upload } from 'lucide-react';
+import { Download, FilePlus2, Upload } from 'lucide-react';
 import { GraphEditor, ToolButton, edgeColorTools, type EditTool } from './components/GraphEditor';
 import { OutputCanvas } from './components/OutputCanvas';
 import { EXAMPLE_CATALOG, createExampleStateById, type ExampleId } from './domain/examples';
@@ -21,6 +21,7 @@ export default function App() {
   const stateRef = useRef<AppState>(state);
   const undoStackRef = useRef<AppState[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const fileMenuRef = useRef<HTMLDetailsElement | null>(null);
   const examplesMenuRef = useRef<HTMLDetailsElement | null>(null);
 
   stateRef.current = state;
@@ -83,6 +84,16 @@ export default function App() {
     commitState({ ...stateRef.current, level });
   }
 
+  function createNewModel() {
+    clearUndoHistory();
+    commitState(createInitialState());
+    setActiveRule('red');
+    setActiveTool('move');
+    setMessage('');
+    setResetKey((key) => key + 1);
+    fileMenuRef.current?.removeAttribute('open');
+  }
+
   function loadExample(id: ExampleId, name: string) {
     clearUndoHistory();
     commitState(createExampleStateById(id));
@@ -128,9 +139,13 @@ export default function App() {
       <header className="top-toolbar" role="toolbar" aria-label="Application toolbar">
         <h1>Geometric L-Systems</h1>
 
-        <details className="toolbar-menu">
+        <details className="toolbar-menu" ref={fileMenuRef}>
           <summary>File</summary>
           <div className="toolbar-menu-panel">
+            <button type="button" onClick={createNewModel}>
+              <FilePlus2 size={16} />
+              New
+            </button>
             <button type="button" onClick={exportJson}>
               <Download size={16} />
               Export
@@ -179,7 +194,7 @@ export default function App() {
               </div>
             </section>
 
-            <GraphEditor graph={state.seed} title="Seed" activeTool={activeTool} onChange={updateSeed} />
+            <GraphEditor key={`seed-${resetKey}`} graph={state.seed} title="Seed" activeTool={activeTool} onChange={updateSeed} />
 
             <section className="control-section">
               <div className="section-label">Rules</div>
@@ -201,6 +216,7 @@ export default function App() {
             </section>
 
             <GraphEditor
+              key={`rule-${activeRule}-${resetKey}`}
               graph={state.rulesByColor[activeRule]}
               title={`${labelFor(activeRule)} Rule`}
               activeTool={activeTool}

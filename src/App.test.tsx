@@ -19,9 +19,43 @@ describe('App toolbar', () => {
 
     fireEvent.click(within(toolbar).getByText('File'));
 
+    expect(within(toolbar).getByRole('button', { name: 'New' })).toBeInTheDocument();
     expect(within(toolbar).getByRole('button', { name: 'Export' })).toBeInTheDocument();
     expect(within(toolbar).getByRole('button', { name: 'Import' })).toBeInTheDocument();
     expect(within(toolbar).getByText('Examples')).toBeInTheDocument();
+  });
+
+  it('creates a new model in the startup state and clears undo history', () => {
+    mockCanvas();
+    mockResizeObserver(640, 480);
+
+    render(<App />);
+
+    const toolbar = screen.getByRole('toolbar', { name: 'Application toolbar' });
+
+    fireEvent.click(within(toolbar).getByText('Examples'));
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Gosper Curve' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Blue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'red oriented edge' }));
+
+    expect(screen.getByRole('slider', { name: /Level/ })).toHaveValue('3');
+    expect(screen.getByRole('region', { name: 'Seed' }).querySelectorAll('line.editor-edge').length).toBeGreaterThan(0);
+
+    fireEvent.click(within(toolbar).getByText('File'));
+    const fileMenu = within(toolbar).getByText('File').closest('details');
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'New' }));
+
+    expect(fileMenu).not.toHaveAttribute('open');
+    expect(screen.getByRole('slider', { name: /Level/ })).toHaveValue('0');
+    expect(screen.getByRole('region', { name: 'Seed' }).querySelectorAll('line.editor-edge')).toHaveLength(0);
+    expect(screen.getByRole('region', { name: 'Red Rule' }).querySelectorAll('line.editor-edge')).toHaveLength(0);
+    expect(screen.getByRole('tab', { name: 'Red' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Move vertices' })).toHaveClass('active');
+    expect(screen.queryByText('Gosper Curve loaded.')).not.toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'z', metaKey: true });
+
+    expect(screen.getByRole('region', { name: 'Seed' }).querySelectorAll('line.editor-edge')).toHaveLength(0);
   });
 
   it('places the Level slider at the bottom of the left toolbar with seven available levels', () => {
