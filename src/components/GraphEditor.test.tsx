@@ -23,13 +23,29 @@ describe('GraphEditor visuals', () => {
     expect(marker.getAttribute('markerHeight')).toBe('7');
   });
 
-  it('marks the required white endpoint with an extra circular ring', () => {
-    const { container } = render(<GraphEditor graph={ruleGraph} title="Red Rule" activeTool="move" onChange={vi.fn()} />);
+  it('shows regular endpoints connected by a faint colored substitution guide', () => {
+    const { container } = render(
+      <GraphEditor
+        graph={ruleGraph}
+        title="Red Rule"
+        activeTool="move"
+        onChange={vi.fn()}
+        substitutionGuideColor="red"
+      />,
+    );
 
-    const whiteEndpointRing = container.querySelector('circle.endpoint-white-ring');
+    const guide = container.querySelector('line.substitution-guide') as SVGLineElement;
+    const guideMarker = container.querySelector('marker[id$="substitution-guide"]') as SVGMarkerElement;
+    const endpoints = container.querySelectorAll('circle.vertex.substitution-endpoint');
 
-    expect(whiteEndpointRing).toBeInTheDocument();
-    expect(whiteEndpointRing).toHaveAttribute('r', '11');
+    expect(endpoints).toHaveLength(2);
+    expect(container.querySelector('circle.endpoint-black')).not.toBeInTheDocument();
+    expect(container.querySelector('circle.endpoint-white-ring')).not.toBeInTheDocument();
+    expect(guide).toHaveAttribute('x1', '36');
+    expect(Number(guide.getAttribute('x2'))).toBeLessThan(244);
+    expect(guide).toHaveAttribute('stroke', '#dc2626');
+    expect(guideMarker).toHaveAttribute('markerWidth', '28');
+    expect(guideMarker).toHaveAttribute('markerHeight', '28');
   });
 
   it('shows selected edges with a halo instead of changing the edge stroke class', () => {
@@ -273,7 +289,7 @@ describe('GraphEditor editing', () => {
     };
     const { container } = render(<GraphEditor graph={graph} title="Red Rule" activeTool="red" onChange={handleChange} />);
     const svg = container.querySelector('svg') as SVGSVGElement;
-    const source = container.querySelector('circle.endpoint-black') as SVGCircleElement;
+    const source = container.querySelector('circle.vertex') as SVGCircleElement;
 
     mockSvgBounds(svg, { width: 400, height: 196 });
 

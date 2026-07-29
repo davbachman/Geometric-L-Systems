@@ -11,6 +11,7 @@ interface GraphEditorProps {
   title: string;
   activeTool: EditTool;
   onChange: (graph: Graph) => void;
+  substitutionGuideColor?: EdgeColor;
 }
 
 type Selection = { kind: 'vertex' | 'edge'; id: string } | null;
@@ -37,14 +38,14 @@ const VIEW_WIDTH = 280;
 const VIEW_HEIGHT = 180;
 const INITIAL_VIEW_BOX: EditorViewBox = { x: 0, y: 0, width: VIEW_WIDTH, height: VIEW_HEIGHT };
 const VERTEX_RADIUS = 7;
-const WHITE_ENDPOINT_RING_RADIUS = 11;
 const ARROW_ENDPOINT_GAP = 12;
+const SUBSTITUTION_GUIDE_ENDPOINT_GAP = 18;
 const EDGE_TARGET_RADIUS = 14;
 const MIN_EDGE_DRAG_DISTANCE = 6;
 const MIN_VIEW_WIDTH = 28;
 const MAX_VIEW_WIDTH = 1800;
 
-export function GraphEditor({ graph, title, activeTool, onChange }: GraphEditorProps) {
+export function GraphEditor({ graph, title, activeTool, onChange, substitutionGuideColor }: GraphEditorProps) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const markerPrefix = useId().replaceAll(':', '');
@@ -55,6 +56,12 @@ export function GraphEditor({ graph, title, activeTool, onChange }: GraphEditorP
   const [viewBox, setViewBox] = useState<EditorViewBox>(INITIAL_VIEW_BOX);
 
   const vertexById = useMemo(() => new Map(graph.vertices.map((vertex) => [vertex.id, vertex])), [graph.vertices]);
+  const substitutionEndpoints = substitutionGuideColor
+    ? {
+        source: graph.vertices.find((vertex) => vertex.role === 'blackEndpoint'),
+        target: graph.vertices.find((vertex) => vertex.role === 'whiteEndpoint'),
+      }
+    : null;
 
   useEffect(() => {
     if (activeTool === 'move') {
@@ -443,19 +450,10 @@ export function GraphEditor({ graph, title, activeTool, onChange }: GraphEditorP
   function renderVertex(vertex: Vertex) {
     const selected = selection?.kind === 'vertex' && selection.id === vertex.id;
     const pending = pendingEdgeSourceId === vertex.id;
-    const className = vertex.role === 'blackEndpoint' ? 'vertex endpoint-black' : vertex.role === 'whiteEndpoint' ? 'vertex endpoint-white' : 'vertex';
+    const className = `vertex${vertex.role ? ' substitution-endpoint' : ''}`;
 
     return (
       <g key={vertex.id}>
-        {vertex.role === 'whiteEndpoint' ? (
-          <circle
-            className="endpoint-white-ring"
-            cx={vertex.x}
-            cy={vertex.y}
-            r={WHITE_ENDPOINT_RING_RADIUS}
-            pointerEvents="none"
-          />
-        ) : null}
         <circle
           className={`${className}${selected || pending ? ' selected' : ''}`}
           cx={vertex.x}
@@ -555,8 +553,30 @@ export function GraphEditor({ graph, title, activeTool, onChange }: GraphEditorP
               <path d="M 0 0 L 12 6 L 0 12 z" fill={entry.hex} />
             </marker>
           ))}
+          {substitutionGuideColor ? (
+            <marker
+              id={`${markerPrefix}-substitution-guide`}
+              viewBox="0 0 12 12"
+              refX="10"
+              refY="6"
+              markerWidth="28"
+              markerHeight="28"
+              markerUnits="userSpaceOnUse"
+              orient="auto"
+            >
+              <path d="M 0 0 L 12 6 L 0 12 z" fill={colorHex(substitutionGuideColor)} fillOpacity="0.2" />
+            </marker>
+          ) : null}
         </defs>
         <rect className="editor-bg" x={viewBox.x} y={viewBox.y} width={viewBox.width} height={viewBox.height} />
+        {substitutionGuideColor && substitutionEndpoints?.source && substitutionEndpoints.target ? (
+          <SubstitutionGuide
+            source={substitutionEndpoints.source}
+            target={substitutionEndpoints.target}
+            color={substitutionGuideColor}
+            markerId={`${markerPrefix}-substitution-guide`}
+          />
+        ) : null}
         <g>{graph.edges.map(renderEdge)}</g>
         {interaction?.kind === 'edge' ? (
           <DraftEdge source={vertexById.get(interaction.sourceId)} pointer={interaction.pointer} tool={activeTool} />
@@ -565,6 +585,33 @@ export function GraphEditor({ graph, title, activeTool, onChange }: GraphEditorP
         <g>{graph.vertices.map(renderVertex)}</g>
       </svg>
     </section>
+  );
+}
+
+function SubstitutionGuide({
+  source,
+  target,
+  color,
+  markerId,
+}: {
+  source: Vertex;
+  target: Vertex;
+  color: EdgeColor;
+  markerId: string;
+}) {
+  const visibleTarget = shortenLineEnd(source, target, SUBSTITUTION_GUIDE_ENDPOINT_GAP);
+
+  return (
+    <line
+      className="substitution-guide"
+      x1={source.x}
+      y1={source.y}
+      x2={visibleTarget.x}
+      y2={visibleTarget.y}
+      stroke={colorHex(color)}
+      markerEnd={`url(#${markerId})`}
+      aria-hidden="true"
+    />
   );
 }
 

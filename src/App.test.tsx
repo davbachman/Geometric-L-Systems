@@ -166,7 +166,7 @@ describe('App toolbar', () => {
 
     const ruleEditor = screen.getByRole('region', { name: 'Red Rule' });
     const svg = ruleEditor.querySelector('svg') as SVGSVGElement;
-    const source = ruleEditor.querySelector('circle.endpoint-black') as SVGCircleElement;
+    const source = ruleEditor.querySelector('circle.vertex') as SVGCircleElement;
     mockSvgBounds(svg);
 
     fireEvent.pointerDown(source, pointerAt(36, 90));

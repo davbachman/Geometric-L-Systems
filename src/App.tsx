@@ -238,6 +238,7 @@ export default function App() {
                   title={activeEditor === 'seed' ? 'Seed' : `${labelFor(activeEditor)} Rule`}
                   activeTool={activeTool}
                   onChange={(graph) => (activeEditor === 'seed' ? updateSeed(graph) : updateRule(activeEditor, graph))}
+                  substitutionGuideColor={activeEditor === 'seed' ? undefined : activeEditor}
                 />
               </div>
             </section>
