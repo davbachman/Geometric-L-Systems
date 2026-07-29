@@ -695,7 +695,7 @@ export function ToolButton({
   return (
     <button className={`tool-button${isActive ? ' active' : ''}`} type="button" title={label} onClick={() => onSelect(tool)}>
       {tool === 'move' ? (
-        <MousePointer2 size={16} />
+        <MousePointer2 size={24} />
       ) : (
         <PencilToolIcon color={tool === 'black' ? '#111827' : colorHex(tool)} />
       )}

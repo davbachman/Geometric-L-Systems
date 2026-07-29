@@ -223,17 +223,18 @@ button:hover {
 }
 
 .tool-strip {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  width: 100%;
 }
 
 .tool-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 32px;
+  height: 46px;
+  width: 100%;
 }
 
 .tool-button.active {
@@ -249,9 +250,9 @@ button:hover {
 
 .pencil-tool-icon {
   display: block;
-  height: 20px;
+  height: 30px;
   overflow: visible;
-  width: 20px;
+  width: 30px;
 }
 
 .mini-swatch,
